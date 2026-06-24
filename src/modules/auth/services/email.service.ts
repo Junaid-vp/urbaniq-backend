@@ -1,47 +1,67 @@
 import nodemailer from 'nodemailer';
 
 export const sendOTPEmail = async (email: string, otp: string): Promise<boolean> => {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASSWORD;
-  const from = process.env.FROM_EMAIL || 'noreply@urbaniq.com';
-
-  console.log(`[OTP Verification] Generated code for ${email}: ${otp}`);
-
-  // Fallback if SMTP config is missing
-  if (!host || !user || !pass) {
-    console.log('--- SMTP configuration variables (SMTP_HOST, SMTP_USER, SMTP_PASSWORD) are missing in .env. OTP falls back to console logging. ---');
-    return true;
-  }
+  // Log the OTP code first so testing works even without SMTP credentials
+  console.log(`\n\n==============================================`);
+  console.log(`🔒 URBANIQ VERIFICATION OTP FOR ${email} IS: ${otp}`);
+  console.log(`==============================================\n\n`);
 
   try {
     const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // true for 465, false for other ports
+      service: 'gmail',
       auth: {
-        user,
-        pass,
+        user: process.env.SMTP_EMAIL || 'urbaniq.test@gmail.com',
+        pass: process.env.SMTP_PASSWORD || '',
       },
     });
 
+    if (!process.env.SMTP_PASSWORD) {
+      console.warn("⚠️ SMTP_PASSWORD not set in .env. OTP was only logged to console.");
+      return true; // Return true as fallback is active
+    }
+
     const mailOptions = {
-      from: `"Urbaniq Support" <${from}>`,
+      from: `"Urbaniq Security" <${process.env.SMTP_EMAIL || 'urbaniq.test@gmail.com'}>`,
       to: email,
       subject: 'Your Urbaniq Verification Code',
-      text: `Hello,\n\nYour OTP code for verification is: ${otp}\n\nThis code will expire in 5 minutes.\n\nThank you,\nUrbaniq Team`,
+      text: `Your Urbaniq verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nDo not share this code with anyone.`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-          <h2 style="color: #333333; text-align: center;">Urbaniq Verification Code</h2>
-          <p style="font-size: 16px; color: #555555;">Hello,</p>
-          <p style="font-size: 16px; color: #555555;">Thank you for choosing Urbaniq. Use the following security code to complete your verification process. This code is valid for <strong>5 minutes</strong>.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2d89ef; background-color: #f0f7ff; padding: 10px 20px; border-radius: 4px; border: 1px dashed #2d89ef;">${otp}</span>
+        <div style="background-color: #FAF7F5; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; min-height: 100%;">
+          <div style="max-width: 500px; margin: 0 auto; border-radius: 20px; box-shadow: 0 4px 12px rgba(61,26,14,0.08); overflow: hidden; border: 1px solid #E8D5C4; background: #ffffff;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #1A365D 0%, #2A4365 100%); padding: 32px; text-align: center; border-bottom: 3px solid #3182CE;">
+              <span style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: sans-serif;">Urban<span style="color: #3182CE;">iq</span></span>
+              <p style="color: rgba(255,255,255,0.6); margin: 6px 0 0 0; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Account Protection Center</p>
+            </div>
+            
+            <!-- Body -->
+            <div style="padding: 40px 32px; text-align: center;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: #EBF8FF; line-height: 48px; margin: 0 auto 20px auto; text-align: center;">
+                <span style="font-size: 20px; color: #3182CE; vertical-align: middle;">🔒</span>
+              </div>
+              <h2 style="color: #2D3748; margin: 0 0 12px 0; font-size: 20px; font-weight: 800;">Email Verification Required</h2>
+              <p style="color: #4A5568; font-size: 14px; line-height: 1.5; margin: 0 0 32px 0;">Use the following security code to complete your verification process. This code is valid for <strong>5 minutes</strong>.</p>
+              
+              <!-- OTP Code Display -->
+              <div style="background: #F7FAFC; border: 1.5px dashed #CBD5E0; padding: 20px; border-radius: 16px; margin: 0 auto 32px auto; display: inline-block; min-width: 240px; text-align: center;">
+                <span style="font-size: 36px; font-weight: 900; letter-spacing: 6px; color: #2D3748; font-family: 'Courier New', Courier, monospace;">${otp}</span>
+              </div>
+
+              <!-- Expiry Alert -->
+              <div style="background: #EBF8FF; border: 1px solid #BEE3F8; border-radius: 12px; padding: 12px 16px; text-align: left; margin-bottom: 8px;">
+                <p style="color: #2B6CB0; font-size: 12px; font-weight: bold; margin: 0 0 4px 0;">⏳ Expires in 5 minutes</p>
+                <p style="color: #4A5568; font-size: 11px; margin: 0; line-height: 1.4;">If you did not request this verification code, please ignore this email.</p>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #FAF7F5; padding: 24px; text-align: center; border-top: 1px solid #E8D5C4;">
+              <p style="color: #4A5568; opacity: 0.6; font-size: 11px; margin: 0; font-weight: 600;">Urbaniq • Security Operations Center</p>
+              <p style="color: #4A5568; opacity: 0.4; font-size: 10px; margin: 4px 0 0 0;">This is an automated transmission. Please do not reply to this address.</p>
+            </div>
+            
           </div>
-          <p style="font-size: 14px; color: #999999; text-align: center;">If you did not request this code, please ignore this email.</p>
-          <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #aaaaaa; text-align: center;">&copy; 2026 Urbaniq. All rights reserved.</p>
         </div>
       `,
     };
@@ -50,7 +70,7 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<boolean>
     console.log(`Email sent successfully: ${info.messageId}`);
     return true;
   } catch (error: any) {
-    console.error(`Failed to send email to ${email}: ${error.message}`);
+    console.error("Failed to send OTP email:", error);
     return false;
   }
 };
