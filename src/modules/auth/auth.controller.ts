@@ -28,6 +28,11 @@ export const registerUser = async (req: Request, res: Response) => {
     });
 
     if (user) {
+      // Auto-generate and send OTP
+      const otp = generateOTP();
+      await storeOTP(user.email, otp);
+      await sendOTPEmail(user.email, otp);
+
       const accessToken = generateAccessToken(user._id.toString());
       const refreshToken = await generateRefreshToken(user._id.toString());
 
@@ -37,6 +42,7 @@ export const registerUser = async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        isVerified: user.isVerified,
         accessToken,
         refreshToken,
       });
@@ -65,6 +71,7 @@ export const loginUser = async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        isVerified: user.isVerified,
         accessToken,
         refreshToken,
       });
