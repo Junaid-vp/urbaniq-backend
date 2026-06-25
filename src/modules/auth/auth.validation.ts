@@ -42,3 +42,17 @@ export const googleRegisterSchema = Joi.object({
   role: Joi.string().valid('Admin', 'Owner', 'Agent', 'Buyer').required(),
 });
 
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+export const resetPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.string().length(6).pattern(/^\d+$/).required().messages({
+    'string.pattern.base': 'OTP must contain only digits.',
+    'string.length': 'OTP must be exactly 6 digits.'
+  }),
+  newPassword: Joi.string().min(6).required(),
+});
+
+

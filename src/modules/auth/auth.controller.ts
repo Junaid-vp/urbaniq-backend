@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import User from '../user/user.model';
 import { redisClient } from '../../config/redis';
 import { generateOTP, storeOTP, verifyOTPCode } from './services/otp.service';
-import { sendOTPEmail } from './services/email.service';
+import { sendOTPEmail, sendResetPasswordEmail } from './services/email.service';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -315,6 +315,66 @@ export const logoutUser = async (req: Request, res: Response) => {
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'User with this email does not exist' });
+    }
+
+    const otp = generateOTP();
+    const cacheKey = `resetOtp:${normalizedEmail}`;
+    await redisClient.set(cacheKey, otp, { EX: 300 });
+
+    const emailSent = await sendResetPasswordEmail(normalizedEmail, otp);
+    if (!emailSent) {
+      return res.status(500).json({ message: 'Failed to send reset email' });
+    }
+
+    const showOtpInResponse = !process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD;
+
+    res.json({
+      message: 'Password reset code sent to email',
+      ...(showOtpInResponse ? { otp } : {})
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const cacheKey = `resetOtp:${normalizedEmail}`;
+    const storedOtp = await redisClient.get(cacheKey);
+
+    if (!storedOtp || storedOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid or expired verification code' });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    await redisClient.del(cacheKey);
+
+    res.json({ message: 'Password reset successful. You can now log in.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

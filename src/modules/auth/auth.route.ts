@@ -8,6 +8,8 @@ import {
   verifyOTP,
   refreshSession,
   logoutUser,
+  forgotPassword,
+  resetPassword,
 } from './auth.controller';
 
 import { validate } from '../../core/middlewares/validate.middleware';
@@ -20,6 +22,8 @@ import {
   logoutSchema,
   googleAuthSchema,
   googleRegisterSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from './auth.validation';
 
 const router = Router();
@@ -32,5 +36,7 @@ router.post('/send-otp', validate(sendOtpSchema), sendOTP);
 router.post('/verify-otp', validate(verifyOtpSchema), verifyOTP);
 router.post('/refresh', validate(refreshSchema), refreshSession);
 router.post('/logout', validate(logoutSchema), logoutUser);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 
 export default router;
