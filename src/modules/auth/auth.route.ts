@@ -1,3 +1,4 @@
+// Authentication Routes for User Registration, Login, Google OAuth, and OTP Verification
 import { Router } from 'express';
 import {
   registerUser,
