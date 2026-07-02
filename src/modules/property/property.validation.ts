@@ -8,9 +8,12 @@ const locationSchema = Joi.object({
 });
 
 const featuresSchema = Joi.object({
-  bedrooms: Joi.number().integer().min(0).required(),
-  bathrooms: Joi.number().min(0).required(),
   area: Joi.number().positive().required(),
+  bedrooms: Joi.number().integer().min(0).optional(),
+  bathrooms: Joi.number().min(0).optional(),
+  furnishing: Joi.string().valid('Furnished', 'Semi-Furnished', 'Unfurnished').optional(),
+  suitableFor: Joi.array().items(Joi.string()).optional(),
+  zoning: Joi.string().valid('Residential', 'Commercial', 'Agricultural', 'Industrial').optional(),
 });
 
 export const createProperty = Joi.object({
@@ -44,6 +47,9 @@ export const getProperties = Joi.object({
   city: Joi.string(),
   minPrice: Joi.number().positive(),
   maxPrice: Joi.number().positive(),
+  ownerId: Joi.string().hex().length(24),
+  agentId: Joi.string().hex().length(24),
+  status: Joi.string().valid('Draft', 'Pending Approval', 'Approved', 'Published', 'Sold', 'Rented'),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
   sortBy: Joi.string().default('createdAt'),

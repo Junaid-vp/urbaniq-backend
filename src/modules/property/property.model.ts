@@ -11,9 +11,12 @@ export interface IProperty extends Document {
     zipCode?: string;
   };
   features: {
-    bedrooms: number;
-    bathrooms: number;
     area: number; // sqft
+    bedrooms?: number;
+    bathrooms?: number;
+    furnishing?: 'Furnished' | 'Semi-Furnished' | 'Unfurnished';
+    suitableFor?: string[]; // e.g. ['Office', 'Shop', 'Warehouse']
+    zoning?: 'Residential' | 'Commercial' | 'Agricultural' | 'Industrial';
   };
   amenities: string[];
   images: string[];
@@ -37,9 +40,12 @@ const PropertySchema: Schema = new Schema(
       zipCode: { type: String },
     },
     features: {
-      bedrooms: { type: Number, required: true },
-      bathrooms: { type: Number, required: true },
       area: { type: Number, required: true },
+      bedrooms: { type: Number },
+      bathrooms: { type: Number },
+      furnishing: { type: String, enum: ['Furnished', 'Semi-Furnished', 'Unfurnished'] },
+      suitableFor: [{ type: String }],
+      zoning: { type: String, enum: ['Residential', 'Commercial', 'Agricultural', 'Industrial'] },
     },
     amenities: [{ type: String }],
     images: [{ type: String }],
