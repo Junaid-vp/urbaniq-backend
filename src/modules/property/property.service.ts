@@ -1,4 +1,5 @@
 import Property, { IProperty } from './property.model';
+import Assignment from './assignment.model';
 import { AppError } from '../../core/utils/AppError';
 import mongoose from 'mongoose';
 
@@ -15,6 +16,9 @@ export const queryProperties = async (filters: any, options: any) => {
 
   if (filters.type) query.propertyType = filters.type;
   if (filters.city) query['location.city'] = new RegExp(filters.city as string, 'i');
+  if (filters.ownerId) query.ownerId = filters.ownerId;
+  if (filters.agentId) query.agentId = filters.agentId;
+  if (filters.status) query.status = filters.status;
   
   if (filters.minPrice || filters.maxPrice) {
     query.price = {};
@@ -50,7 +54,7 @@ export const queryProperties = async (filters: any, options: any) => {
   };
 };
 
-export const getPropertyById = async (id: string): Promise<IProperty> => {
+export const getPropertyById = async (id: string): Promise<any> => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError('Invalid property ID format', 400);
   }
@@ -63,7 +67,15 @@ export const getPropertyById = async (id: string): Promise<IProperty> => {
     throw new AppError('Property not found', 404);
   }
 
-  return property;
+  // Find the latest assignment request for this property
+  const assignment = await Assignment.findOne({ propertyId: id })
+    .populate('agentId', 'firstName lastName email phone profileImage')
+    .sort({ createdAt: -1 });
+
+  return {
+    ...property.toObject(),
+    latestAssignment: assignment || null,
+  };
 };
 
 export const updatePropertyById = async (id: string, updateBody: Partial<IProperty>, user: any): Promise<IProperty> => {

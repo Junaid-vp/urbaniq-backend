@@ -65,6 +65,7 @@ export const loginUser = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         isVerified: user.isVerified,
+        token: accessToken,
         accessToken,
         refreshToken,
       });
@@ -295,6 +296,7 @@ export const refreshSession = async (req: Request, res: Response) => {
     const newRefreshToken = await generateRefreshToken(decoded.id);
 
     res.json({
+      token: newAccessToken,
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     });
