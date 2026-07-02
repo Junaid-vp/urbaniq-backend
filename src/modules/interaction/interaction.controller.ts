@@ -74,7 +74,7 @@ export const scheduleVisit = async (req: Request, res: Response) => {
     const visit = new Visit({
       propertyId,
       buyerId: (req as any).user._id,
-      agentId: property.agentId || property.ownerId, // Fallback to owner if no agent
+      agentId: property.agentId || undefined, // Only set if an agent is actually assigned
       date,
       timeSlot
     });
@@ -97,18 +97,37 @@ export const getVisits = async (req: Request, res: Response) => {
     const role = (req as any).user.role;
     const userId = (req as any).user._id;
 
+    // Buyer: sees their own scheduled visits
     if (role === 'Buyer') {
       const visits = await Visit.find({ buyerId: userId })
         .populate('propertyId', 'title location')
-        .populate('agentId', 'firstName lastName phone');
+        .populate('agentId', 'firstName lastName phone')
+        .sort({ date: 1 });
       return res.json(visits);
-    } 
-    
-    const visits = await Visit.find({ agentId: userId })
-      .populate('propertyId', 'title location')
-      .populate('buyerId', 'firstName lastName phone');
+    }
 
-    res.json(visits);
+    // Agent: sees visits for properties they are assigned to
+    if (role === 'Agent') {
+      const visits = await Visit.find({ agentId: userId })
+        .populate('propertyId', 'title location address')
+        .populate('buyerId', 'firstName lastName phone')
+        .sort({ date: 1 });
+      return res.json(visits);
+    }
+
+    // Owner: sees visits for all properties they own
+    if (role === 'Owner') {
+      const ownedProperties = await Property.find({ ownerId: userId }).select('_id');
+      const propertyIds = ownedProperties.map((p) => p._id);
+      const visits = await Visit.find({ propertyId: { $in: propertyIds } })
+        .populate('propertyId', 'title location')
+        .populate('buyerId', 'firstName lastName phone')
+        .populate('agentId', 'firstName lastName phone')
+        .sort({ date: 1 });
+      return res.json(visits);
+    }
+
+    res.json([]);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
@@ -144,7 +163,7 @@ export const updateVisitStatus = async (req: Request, res: Response) => {
   try {
     const { status, date, timeSlot } = req.body;
     const visit = await Visit.findById(req.params.id);
-    
+
     if (!visit) return res.status(404).json({ message: 'Visit not found' });
 
     visit.status = status || visit.status;
@@ -152,9 +171,16 @@ export const updateVisitStatus = async (req: Request, res: Response) => {
     if (timeSlot) visit.timeSlot = timeSlot;
 
     const updatedVisit = await visit.save();
-    
+
+    // Notify the buyer about the status change
     emitToUser(updatedVisit.buyerId.toString(), 'visit_updated', updatedVisit);
-    
+
+    // Also notify the property owner so their dashboard updates in real-time
+    const property = await Property.findById(updatedVisit.propertyId);
+    if (property?.ownerId) {
+      emitToUser(property.ownerId.toString(), 'visit_updated', updatedVisit);
+    }
+
     res.json(updatedVisit);
   } catch (error) {
     res.status(400).json({ message: 'Error updating visit' });
