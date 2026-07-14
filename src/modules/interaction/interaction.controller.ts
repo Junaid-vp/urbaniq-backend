@@ -136,12 +136,15 @@ export const sendMessage = async (req: Request, res: Response) => {
       // Buyer sent message, notify agent if one exists, else owner
       if (property.agentId) {
         sendNotification(property.agentId.toString(), 'Message', 'New Message', `New message regarding ${property.title}`, inquiryId.toString());
+        emitToUser(property.agentId.toString(), 'new_message', createdMessage.toJSON());
       } else if (property.ownerId) {
         sendNotification(property.ownerId.toString(), 'Message', 'New Message', `New message regarding ${property.title}`, inquiryId.toString());
+        emitToUser(property.ownerId.toString(), 'new_message', createdMessage.toJSON());
       }
     } else {
       // Owner/Agent sent message, notify buyer
       sendNotification(inquiry.buyerId.toString(), 'Message', 'New Message', `New message regarding ${property.title}`, inquiryId.toString());
+      emitToUser(inquiry.buyerId.toString(), 'new_message', createdMessage.toJSON());
     }
 
     // Update inquiry status
@@ -417,8 +420,10 @@ export const sendCollaborationMessage = async (req: Request, res: Response) => {
     // Notify the other party
     if (role === 'Owner' && property.agentId) {
       sendNotification(property.agentId.toString(), 'Message', 'New Collaboration Message', `New message from owner on ${property.title}`, propertyId.toString());
+      emitToUser(property.agentId.toString(), 'new_message', createdMessage.toJSON());
     } else if (role === 'Agent' && property.ownerId) {
       sendNotification(property.ownerId.toString(), 'Message', 'New Collaboration Message', `New message from agent on ${property.title}`, propertyId.toString());
+      emitToUser(property.ownerId.toString(), 'new_message', createdMessage.toJSON());
     }
 
     res.status(201).json(createdMessage);
